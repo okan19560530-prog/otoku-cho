@@ -221,7 +221,7 @@ ol.legs .rd{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;
 .ic{display:inline-flex;align-items:center;gap:6px;font-size:13px;border:1.5px solid var(--line);border-radius:999px;padding:3px 10px;cursor:pointer}
 .ic input{accent-color:var(--ink)}
 .ic.on{border-color:var(--ink);background:color-mix(in srgb,var(--pop) 30%,var(--card))}
-.chips button:disabled{opacity:.4;cursor:not-allowed}
+.chips button.far{opacity:.45;border-style:dashed}
 .reg{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:var(--card)}
 .reg summary{cursor:pointer;font-weight:700}
 .reg[open]{display:flex;flex-direction:column;gap:10px}
@@ -737,7 +737,7 @@ renderDeals();renderIdeas();showStatus();
 /* ---- みんなの版: data.json を読む ---- */
 const FORM={"url": "https://docs.google.com/forms/d/e/1FAIpQLSfVuJ0GYWVMByttP-hbrxjP1sqRdaWF10hhaFtaiSSlUsjjMg/viewform", "zipEntry": "", "radiusEntry": ""};
 let AREAS=[];
-let ZONES=[], viewR=3;
+let ZONES=[], viewR=3, prefR=3;
 function bestDocs(list){const m=new Map();for(const a of list){const o=m.get(a.zip);if(!o||Number(a.radiusKm)>Number(o.radiusKm)||(Number(a.radiusKm)===Number(o.radiusKm)&&(a.updatedAt||"")>(o.updatedAt||"")))m.set(a.zip,a)}return [...m.values()]}
 function viewDoc(a,r){
   const stores=(a.stores||[]).filter(s=>s.distanceKm==null||Number(s.distanceKm)<=r+1e-9);
@@ -748,20 +748,30 @@ function viewDoc(a,r){
   const fr=o=>{const out={};for(const g in (o||{}))out[g]=(o[g]||[]).filter(ok);return out};
   return {...a,radiusKm:r,scrapedKm:Number(a.radiusKm),stores,items,recipes:fr(a.recipes),recipesMore:fr(a.recipesMore),coords:(a.coords||[]).filter(ok)};
 }
-function renderViewRadius(scraped){
-  $("viewRadius").innerHTML=RADII.map(r=>`<button type="button" aria-pressed="${r===viewR}" data-r="${r}" ${r>scraped?"disabled":""}>${r}km</button>`).join("");
-  $("viewRadius").querySelectorAll("button").forEach(b=>b.onclick=()=>{viewR=Number(b.dataset.r);LS.set("otoku_view_r",viewR);showArea($("areaSel").value)});
-  $("radNote").textContent=scraped<RADII[RADII.length-1]?`この地域は半径${scraped}kmまで読み取り済みです。それより遠くは、次の読み取り(${nextRun()})以降に増えます。`:"";
+function renderViewRadius(scraped,stores,dmin){
+  $("viewRadius").innerHTML=RADII.map(r=>`<button type="button" aria-pressed="${r===viewR}" data-r="${r}" class="${r>scraped?"far":""}">${r}km</button>`).join("");
+  const note=$("radNote");
+  const base=scraped<RADII[RADII.length-1]?`この地域は半径${scraped}kmまで読み取り済みです。それより遠くは、次の読み取り(${nextRun()})以降に見られるようになります。`:"";
+  note.textContent=base;
+  $("viewRadius").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    const r=Number(b.dataset.r);
+    if(r>scraped){note.textContent=`半径${r}kmは、まだ読み取っていません。次の読み取り(${nextRun()})のあとに見られます。いまは半径${scraped}kmまで見られます。`;return}
+    viewR=r;prefR=r;LS.set("otoku_view_r",viewR);showArea($("areaSel").value)});
+  if(!stores&&dmin!=null){
+    const c=RADII.find(r=>r>=dmin&&r<=scraped);
+    note.textContent=`半径${viewR}km以内には、チラシを読み取ったお店がありません(いちばん近いお店は${dmin}km)。`;
+    if(c){const bt=document.createElement("button");bt.type="button";bt.className="btn sub";bt.textContent=`${c}kmにして見る`;bt.style.marginLeft="8px";bt.onclick=()=>{viewR=c;prefR=c;LS.set("otoku_view_r",c);showArea($("areaSel").value)};note.appendChild(bt)}
+  }
 }
 function showArea(zip){
   const a=ZONES.find(x=>x.zip===zip)||ZONES[0]; if(!a)return;
   const scraped=Number(a.radiusKm);
-  if(viewR>scraped)viewR=Math.max(...RADII.filter(r=>r<=scraped),RADII[0]);
+  viewR=Math.max(...RADII.filter(r=>r<=Math.min(prefR,scraped)),RADII[0]);
   curKey=`${a.zip}-${viewR}`;
   dealsDoc=viewDoc(a,viewR); ideasDoc={recipes:dealsDoc.recipes,coords:dealsDoc.coords}; extra.recipes={}; extra.coords=null;
   LS.set("otoku_view_area",a.zip);
   $("point").innerHTML=`地点: <b>${esc(a.region||"")}</b> から半径${viewR}km(${dealsDoc.stores.length}店)`;
-  renderViewRadius(scraped);
+  renderViewRadius(scraped,dealsDoc.stores.length,(()=>{const ds=(a.stores||[]).map(s=>Number(s.distanceKm)).filter(x=>!isNaN(x));return ds.length?Math.min(...ds):null})());
   const today=todayISO();
   $("status").dataset.s=a.date===today?"done":"idle";
   $("statusMsg").innerHTML=a.date===today?`今日のチラシを読み取り済み<span class="when">更新 ${ago(a.updatedAt)}</span>`:`${esc(a.date||"")}の結果です(今日の分は次の読み取り ${nextRun()} で更新)<span class="when">${a.updatedAt?"更新 "+ago(a.updatedAt):""}</span>`;
@@ -835,7 +845,7 @@ const SHARE_URL="https://okan19560530-prog.github.io/otoku-cho/";
   ZONES=bestDocs(AREAS);
   $("areaSel").innerHTML=ZONES.map(a=>`<option value="${a.zip}">${esc(a.region||a.zip)}</option>`).join("");
   const saved=String(LS.get("otoku_view_area")||"").split("-")[0]; if(saved&&ZONES.some(a=>a.zip===saved))$("areaSel").value=saved;
-  const sr=Number(LS.get("otoku_view_r")); viewR=RADII.includes(sr)?sr:3;
+  const sr=Number(LS.get("otoku_view_r")); prefR=RADII.includes(sr)?sr:3;viewR=prefR;
   $("areaSel").onchange=()=>showArea($("areaSel").value);
   showArea($("areaSel").value);regUpdate();
 })();
