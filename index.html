@@ -47,7 +47,7 @@ select:focus,input:focus,button:focus-visible,a:focus-visible{outline:3px solid 
 .point{font-size:14px}
 .point b{font-family:var(--display);font-weight:400;font-size:16px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.chips button{font:inherit;font-size:14px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:5px 14px;cursor:pointer;font-variant-numeric:tabular-nums}
+.chips button{font:inherit;font-size:16px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:8px 16px;cursor:pointer;font-variant-numeric:tabular-nums}
 .chips button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .btn{font:inherit;font-weight:700;border:none;border-radius:8px;padding:11px 20px;cursor:pointer;background:var(--price);color:#fff}
 .btn.sub{background:transparent;color:var(--ink);border:1.5px solid var(--ink);padding:7px 14px;font-size:14px}
@@ -111,13 +111,13 @@ select:focus,input:focus,button:focus-visible,a:focus-visible{outline:3px solid 
 .lastday li b{font-variant-numeric:tabular-nums}
 .lastday .where{font-weight:700}
 .shops{display:flex;flex-direction:column;gap:16px}
-.shop{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.shop header{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:12px 16px;border-bottom:2px solid var(--ink)}
-.shop header h3{font-size:19px;flex:1 1 auto;min-width:0}
-.shop .km{font-family:var(--display);font-size:16px;font-variant-numeric:tabular-nums;background:var(--ink);color:var(--paper);border-radius:999px;padding:1px 10px}
-.shop .per{font-size:13px;color:var(--muted)}
+.shop{background:var(--card);border:2px solid var(--ink);border-radius:12px;overflow:hidden}
+.shop header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:16px 18px;border-bottom:2px solid var(--ink);background:color-mix(in srgb,var(--pop) 28%,var(--card))}
+.shop header h3{font-size:26px;line-height:1.3;flex:1 1 100%;min-width:0}
+.shop .km{font-family:var(--display);font-size:22px;font-variant-numeric:tabular-nums;background:var(--ink);color:var(--paper);border-radius:999px;padding:3px 16px}
+.shop .per{font-size:16px;color:var(--muted)}
 .shop .per.end{color:var(--price);font-weight:700}
-.shop header a{font-size:13px;font-weight:700}
+.shop header a{font-size:16px;font-weight:700;border:2px solid var(--ink);border-radius:999px;padding:4px 14px;text-decoration:none;color:var(--ink)}
 .rows{list-style:none;margin:0;padding:0}
 .rows li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:9px 16px;border-top:1px solid var(--line);align-items:baseline}
 .rows li:first-child{border-top:none}
@@ -184,10 +184,10 @@ table.pt tfoot b{color:var(--price);font-size:15px}
 .pickhead h3{font-size:16px}
 .pick .cnt{font-family:var(--display);font-size:16px;font-variant-numeric:tabular-nums}
 .pickgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:6px}
-.pk{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;min-width:0}
-.pk input{width:18px;height:18px;flex:none;accent-color:var(--ink)}
-.pk .pkn{flex:1;min-width:0;font-size:14px;font-weight:700;line-height:1.35}
-.pk .pkk{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pk{display:flex;align-items:center;gap:10px;border:2px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;min-width:0}
+.pk input{width:24px;height:24px;flex:none;accent-color:var(--ink)}
+.pk .pkn{flex:1;min-width:0;font-size:18px;font-weight:700;line-height:1.35}
+.pk .pkk{font-size:16px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .pk.on{border-color:var(--ink);background:color-mix(in srgb,var(--pop) 30%,var(--card))}
 .pk.off{opacity:.45;cursor:not-allowed}
 .pickfoot{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
@@ -214,7 +214,7 @@ ol.legs .rd{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;
 .rlinks a{text-decoration:none}
 .rmini{font-size:13px;margin-top:6px;line-height:1.6}
 .rmini a{font-weight:700;white-space:nowrap}
-.park{display:inline-block;font-size:11px;font-weight:700;border-radius:4px;padding:1px 6px;white-space:nowrap;vertical-align:middle}
+.park{display:inline-block;font-size:15px;font-weight:700;border-radius:6px;padding:3px 10px;white-space:nowrap;vertical-align:middle}
 .park.ok{background:color-mix(in srgb,var(--leaf) 16%,transparent);color:var(--leaf)}
 .park.ng{background:color-mix(in srgb,var(--price) 14%,transparent);color:var(--price)}
 .park.un{border:1px solid var(--line);color:var(--muted)}
@@ -250,6 +250,17 @@ html{-webkit-text-size-adjust:100%}
   .idea h4{font-size:23px}
   .btn,.chips button,.cats button,.tabs button{min-height:48px}
   .tabs button{font-size:20px}
+  .shop header h3{font-size:28px}
+  .shop .km{font-size:25px}
+  .shop .per,.shop header a{font-size:19px !important}
+  .park{font-size:18px !important;padding:3px 10px}
+  .pk .pkn{font-size:21px !important}
+  .pk .pkk{font-size:19px !important}
+  .pickgrid{grid-template-columns:1fr}
+  .pk{flex-wrap:wrap;row-gap:6px}
+  .pk .pkn{flex:1 1 calc(100% - 44px)}
+  .pk .park,.pk .pkk{margin-left:34px}
+  .pickhead h3{font-size:22px}
 }
 </style>
 
@@ -537,7 +548,12 @@ function renderDeals(){
   if(picks[curKey])picks[curKey]=picks[curKey].filter(n=>allStores.some(s=>s.name===n));
   renderPick(allStores);
   const recMode=byMode==="recipe"; $("pick").hidden=recMode;
-  if(recMode&&recipeSel&&!(recipeSel.uses||[]).every(u=>itemOfUse(u)))recipeSel=null;
+  if(recMode&&recipeSel&&!(recipeSel.uses||[]).every(u=>itemOfUse(u))){
+    ["lastday","storeChips","cats"].forEach(id=>$(id).innerHTML="");
+    $("dealsHead").innerHTML=`<b>「${esc(recipeSel.title)}」</b>の材料を売るお店が、この距離の範囲にはありません。`;
+    $("shops").innerHTML='<div class="empty">距離を広げると、このレシピのお店・商品が出ます。別のレシピを選ぶこともできます。</div>';
+    return;
+  }
   if(recMode&&!recipeSel){
     ["lastday","storeChips","cats"].forEach(id=>$(id).innerHTML="");
     $("dealsHead").textContent="「レシピから探す」を選んでいます。";
