@@ -498,10 +498,10 @@ function routeHTML(names,title){
 /* ---- よく行くお店(5件まで) ---- */
 const MAXPICK=5; let picks={}, pickOnly=true; const autoTried=new Set();
 const pickList=()=>picks[curKey||""]||[];
-let parkOnly=false;
+let parkOnly=false; let byMode="store", recipeSel=null;
 const storeObj=name=>(dealsDoc?.stores||[]).find(s=>s.name===name)||{};
 const parkOK=name=>!parkOnly||storeObj(name).parking==="あり";
-const inPick=name=>parkOK(name)&&(!pickOnly||!pickList().length||pickList().includes(name));
+const inPick=name=>parkOK(name)&&(byMode==="recipe"||!pickOnly||!pickList().length||pickList().includes(name));
 function parkHTML(s,short){const p=s?.parking;
   if(p==="あり")return `<span class="park ok" title="${esc(s.parkingNote||"")}">P ${short?"あり":"駐車場あり"}${s.parkingSpaces?`(${s.parkingSpaces}台)`:""}</span>`;
   if(p==="なし")return `<span class="park ng">P ${short?"なし":"駐車場なし"}</span>`;
@@ -536,8 +536,19 @@ function renderDeals(){
   allStores.sort((a,b)=>(a.distanceKm??99)-(b.distanceKm??99));
   if(picks[curKey])picks[curKey]=picks[curKey].filter(n=>allStores.some(s=>s.name===n));
   renderPick(allStores);
-  const stores=allStores.filter(s=>inPick(s.name)), items=D.items.filter(x=>inPick(x.store));
-  $("dealsHead").innerHTML=`<b>${esc(D.region||"")}</b>${D.radiusKm?` から半径${D.radiusKm}km`:""}の${stores.length}店のチラシから${items.length}品(${esc(D.date||"")}読み取り)。近いお店から順に並べています。${pickOnly&&pickList().length?`<br>いまは選んだ${pickList().length}店(${items.length}品)だけを表示しています。`:""}`;
+  const recMode=byMode==="recipe"; $("pick").hidden=recMode;
+  if(recMode&&recipeSel&&!(recipeSel.uses||[]).every(u=>itemOfUse(u)))recipeSel=null;
+  if(recMode&&!recipeSel){
+    ["lastday","storeChips","cats"].forEach(id=>$(id).innerHTML="");
+    $("dealsHead").textContent="「レシピから探す」を選んでいます。";
+    $("shops").innerHTML='<div class="empty">レシピのカードにある「このレシピのお店・商品を見る」を押すと、そのレシピに使うチラシの商品と、売っているお店だけがここに出ます。</div>';
+    return;
+  }
+  let stores=allStores.filter(s=>inPick(s.name)), items=D.items.filter(x=>inPick(x.store));
+  if(recMode){const set=new Set((recipeSel.uses||[]).map(u=>itemOfUse(u)).filter(Boolean));items=items.filter(x=>set.has(x));stores=stores.filter(s=>items.some(x=>x.store===s.name))}
+  if(recMode)$("dealsHead").innerHTML=`<b>「${esc(recipeSel.title)}」</b>に使うチラシの品: ${items.length}品・${stores.length}店(近いお店から順)。 <button class="btn sub" id="backRecipe" type="button">レシピに戻る</button>`;
+  else $("dealsHead").innerHTML=`<b>${esc(D.region||"")}</b>${D.radiusKm?` から半径${D.radiusKm}km`:""}の${stores.length}店のチラシから${items.length}品(${esc(D.date||"")}読み取り)。近いお店から順に並べています。${pickOnly&&pickList().length?`<br>いまは選んだ${pickList().length}店(${items.length}品)だけを表示しています。`:""}`;
+  if(recMode){const br=$("backRecipe");if(br)br.onclick=()=>document.getElementById("sec3").scrollIntoView({behavior:"smooth"})}
   // 今日まで
   const last=items.filter(endsToday);
   if(last.length){
@@ -573,7 +584,7 @@ function setMode(m){mode=m;$("tabR").setAttribute("aria-selected",m==="recipe");
 $("tabR").onclick=()=>setMode("recipe");$("tabC").onclick=()=>setMode("coord");
 const foodItems=()=>visItems().filter(x=>x.category==="食品");
 const wearItems=()=>visItems().filter(x=>x.category==="アパレル");
-const okByPick=r=>{if(!pickOnly||!pickList().length)return true;const a=dealsDoc?.items||[];return (r.uses||[]).every(u=>{const it=a.find(x=>x.name===u)||a.find(x=>x.name.includes(u)||u.includes(x.name));return !it||pickList().includes(it.store)})};
+const okByPick=r=>{if(byMode==="recipe"||!pickOnly||!pickList().length)return true;const a=dealsDoc?.items||[];return (r.uses||[]).every(u=>{const it=a.find(x=>x.name===u)||a.find(x=>x.name.includes(u)||u.includes(x.name));return !it||pickList().includes(it.store)})};
 function findItem(u){const a=dealsDoc?.items||[];return a.find(x=>x.name===u)||a.find(x=>x.name.includes(u)||u.includes(x.name))}
 function buyHTML(uses){
   const rows=(uses||[]).map(u=>{const x=findItem(u);if(!x)return `<li>${esc(u)}</li>`;const s=storeInfo(x.store);return `<li>${esc(x.name)}${x.unit?" "+esc(x.unit):""} … <span class="s">${esc(x.store)}${kmText(s)?`(${kmText(s)})`:""}</span> <span class="p">${x.price==null?esc(x.priceText||""):yen(x.price)+"円"}</span>${endsToday(x)?' <span class="p">今日まで</span>':""}</li>`});
@@ -713,12 +724,13 @@ function storeBadge(r){const o=storesOf(r).filter(n=>n!==recipeStore);return `<p
   let ls=null; try{ls=localStorage.getItem("otoku_view_by")}catch(e){}
   function apply(by){
     bs.checked=by==="store"; br.checked=by==="recipe";
-    document.body.classList.toggle("rf",by==="recipe");
+    document.body.classList.toggle("rf",by==="recipe");byMode=by;
     const n2=document.querySelector("#sec2 h2 .n"), n3=document.querySelector("#sec3 h2 .n");
     if(n2)n2.textContent=by==="recipe"?"3":"2"; if(n3)n3.textContent=by==="recipe"?"2":"3";
     try{localStorage.setItem("otoku_view_by",by)}catch(e){}
   }
-  bs.onchange=()=>apply("store"); br.onchange=()=>apply("recipe");
+  const redo=()=>{try{renderDeals();renderIdeas()}catch(e){}};
+  bs.onchange=()=>{apply("store");redo()}; br.onchange=()=>{apply("recipe");redo()};
   apply(ls==="recipe"?"recipe":"store");
 })();
 function renderIdeas(){
@@ -733,7 +745,10 @@ function renderIdeas(){
     if(storeMode&&!recipeStore){$("ideas").innerHTML='<div class="empty">上のお店を選ぶと、そのお店のチラシの品を使うレシピが出ます。</div>';return}
     if(storeMode&&!list.length){$("ideas").innerHTML='<div class="empty">このお店の品を使う、このジャンルのレシピはまだありません。別のジャンルやお店を選んでください。</div>';return}
     if(!list.length){const k=genre+"|"+curKey+"|"+pickList().join(",");$("ideas").innerHTML=`<div class="empty">${pickList().length&&pickOnly?"選んだお店だけで材料がそろう":"この"}ジャンルのレシピはまだありません。${sample?"選んだお店の品で考えています…":""}</div>`;if(sample&&!autoTried.has(k)){autoTried.add(k);genRecipe()}return}
-    $("ideas").innerHTML=list.map(x=>(storeMode?storeBadge(x):"")+recipeCard(x)).join("");
+    $("ideas").innerHTML=list.map((x,i)=>{let c=(storeMode?storeBadge(x):"")+recipeCard(x);
+      if(byMode==="recipe"){const on=recipeSel&&recipeSel.title===x.title;c=c.replace(/<\/article>$/,`<button class="btn${on?"":" sub"}" type="button" data-rsel="${i}">${on?"選択中:お店・商品を表示しています":"このレシピのお店・商品を見る"}</button></article>`)}
+      return c}).join("");
+    $("ideas").querySelectorAll("[data-rsel]").forEach(b=>b.onclick=()=>{recipeSel=list[+b.dataset.rsel];renderDeals();renderIdeas();document.getElementById("sec2").scrollIntoView({behavior:"smooth"})});
   }else{
     const list=[...(ideasDoc?.coords||[]),...(extra.coords||[])].filter(okByPick);
     $("moreC").hidden=!sample||!wearItems().length;
