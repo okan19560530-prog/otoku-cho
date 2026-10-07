@@ -307,6 +307,8 @@ html{-webkit-text-size-adjust:100%}
       <button role="tab" id="tabC" aria-selected="false">コーディネート</button>
     </div>
     <div id="recipePane" class="step">
+      <div class="genres" id="rmode" role="group" aria-label="探し方" style="grid-template-columns:1fr 1fr"></div>
+      <div class="chips" id="rstores" hidden></div>
       <div class="genres" id="genres" role="group" aria-label="料理のジャンル"></div>
       <div class="row" style="align-items:center"><button class="btn sub" id="more" hidden>別のレシピを考える</button><span class="lead" id="genStatus" style="font-size:14px"></span></div>
       <details class="isearch" id="aiAsk"><summary>AI(Gemini・ChatGPT)に別のレシピを考えてもらう</summary>
@@ -684,15 +686,33 @@ const moreShown={};
 function moreLeft(g){const pool=dealsDoc?.recipesMore?.[g]||[];return pool.length-(moreShown[curKey+"|"+g]||0)}
 function takeMore(g){const k=curKey+"|"+g, n=moreShown[k]||0, pool=dealsDoc?.recipesMore?.[g]||[];if(n>=pool.length)return false;
   extra.recipes[g]=[...(extra.recipes[g]||[]),...pool.slice(n,n+2)];moreShown[k]=Math.min(pool.length,n+2);return true}
+let recipeBy="recipe", recipeStore=null;
+const itemOfUse=u=>{const a=dealsDoc?.items||[];return a.find(x=>x.name===u)||a.find(x=>x.name.includes(u)||u.includes(x.name))};
+const storesOf=r=>[...new Set((r.uses||[]).map(u=>itemOfUse(u)?.store).filter(Boolean))];
+function renderRMode(all){
+  $("rmode").innerHTML=[["recipe","レシピから探す","料理を選んで、買うお店を知る"],["store","スーパーから探す","お店を選んで、使える料理を知る"]].map(([k,n,t])=>`<button type="button" data-m="${k}" aria-pressed="${recipeBy===k}"><b>${n}</b><span>${t}</span></button>`).join("");
+  $("rmode").querySelectorAll("button").forEach(b=>b.onclick=()=>{recipeBy=b.dataset.m;renderIdeas()});
+  const box=$("rstores"); box.hidden=recipeBy!=="store"; if(box.hidden)return;
+  const stores=[...(dealsDoc?.stores||[])].sort((a,b)=>(a.distanceKm??99)-(b.distanceKm??99));
+  if(recipeStore&&!stores.some(s=>s.name===recipeStore))recipeStore=null;
+  box.innerHTML=stores.map(s=>{const n=all.filter(r=>storesOf(r).includes(s.name)).length;return `<button type="button" data-s="${esc(s.name)}" aria-pressed="${recipeStore===s.name}"${n?"":' class="far"'}>${esc(s.name)}${s.distanceKm!=null?" "+s.distanceKm+"km":""}(${n}品)</button>`}).join("")||'<span class="lead" style="font-size:13px">この範囲にお店がありません。</span>';
+  box.querySelectorAll("button").forEach(b=>b.onclick=()=>{recipeStore=b.dataset.s;renderIdeas()});
+}
+function storeList(all){return all.filter(r=>storesOf(r).includes(recipeStore)).sort((a,b)=>storesOf(a).length-storesOf(b).length)}
+function storeBadge(r){const o=storesOf(r).filter(n=>n!==recipeStore);return `<p class="lead" style="margin:0 0 4px;font-weight:700;font-size:14px">${o.length?`このお店と、ほか${o.length}店(${o.map(esc).join("、")})で材料がそろいます`:"このお店だけで材料がそろいます"}</p>`}
 function renderIdeas(){
   renderISearch();
   if(mode==="recipe"){
-    const base=ideasDoc?.recipes?.[genre]||[], more=extra.recipes[genre]||[], list=[...base,...more].filter(okByPick);
+    const base=ideasDoc?.recipes?.[genre]||[], more=extra.recipes[genre]||[], all=[...base,...more], storeMode=recipeBy==="store";
+    renderRMode(all);
+    const list=storeMode?(recipeStore?storeList(all):[]):all.filter(okByPick);
     $("more").hidden=!foodItems().length||(!sample&&moreLeft(genre)<=0);
     $("more").textContent=moreLeft(genre)>0?`別のレシピを見る(あと${moreLeft(genre)}品)`:"別のレシピを考える";
     if(!foodItems().length){$("ideas").innerHTML='<div class="empty">チラシに食品がまだありません。読み取りが終わると、ジャンルごとのレシピがここに出ます。</div>';return}
+    if(storeMode&&!recipeStore){$("ideas").innerHTML='<div class="empty">上のお店を選ぶと、そのお店のチラシの品を使うレシピが出ます。</div>';return}
+    if(storeMode&&!list.length){$("ideas").innerHTML='<div class="empty">このお店の品を使う、このジャンルのレシピはまだありません。別のジャンルやお店を選んでください。</div>';return}
     if(!list.length){const k=genre+"|"+curKey+"|"+pickList().join(",");$("ideas").innerHTML=`<div class="empty">${pickList().length&&pickOnly?"選んだお店だけで材料がそろう":"この"}ジャンルのレシピはまだありません。${sample?"選んだお店の品で考えています…":""}</div>`;if(sample&&!autoTried.has(k)){autoTried.add(k);genRecipe()}return}
-    $("ideas").innerHTML=list.map(recipeCard).join("");
+    $("ideas").innerHTML=list.map(x=>(storeMode?storeBadge(x):"")+recipeCard(x)).join("");
   }else{
     const list=[...(ideasDoc?.coords||[]),...(extra.coords||[])].filter(okByPick);
     $("moreC").hidden=!sample||!wearItems().length;
