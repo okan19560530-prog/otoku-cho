@@ -1,3 +1,6 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#fbf8ef">
 <title>今日のお得帖 みんなの版</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
@@ -225,6 +228,27 @@ a.btn{text-decoration:none;display:inline-block}
 a.btn.off{opacity:.45;pointer-events:none}
 .notice{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;margin:0}
 @media (prefers-reduced-motion:no-preference){.deal,.idea{animation:in .25s ease both}@keyframes in{from{transform:translateY(4px)}to{transform:none}}}
+
+/* スマホで読みやすく: 小さい文字を大きくし、タップしやすくする */
+html{-webkit-text-size-adjust:100%}
+@media (max-width:640px){
+  body{font-size:17px;line-height:1.75}
+  .wrap{padding-inline:14px;gap:24px}
+  .step h2{font-size:22px}
+  label.f{font-size:14px}
+  .point{font-size:16px}
+  .status{font-size:16px}
+  .status .when,.deal .store,.deal .unit,.deal .was,.deal .note,.deal .off,.idea .meta,.chip,.flabel,.mnote,.cost .cl,.rows .sub,.pickfoot .only,.ol.steps .st,ol.steps .st,table.ing td.yc,.badge em,.pk .pkk,.mast .date{font-size:14px !important}
+  .genres button span,.mlinks .mk,.fl,.cost .cn,table.pt thead th,table.pt td.n small,.badge span{font-size:13px !important}
+  .stores,.cats button,.chips button,.shop .per,.shop header a,.idea .tip,.cost .cs,.buy .total,.mlinks a,table.pt,table.pt tfoot th,.lead,.btn.sub{font-size:15px !important}
+  .lastday li,.buy li,.buy .sum,table.ing,ol.steps li,.shop .morebtn,.pk .pkn,.err,.chips button{font-size:16px !important}
+  .deal .price{font-size:32px}
+  .rows .pr{font-size:22px}
+  .shop header h3{font-size:20px}
+  .idea h4{font-size:20px}
+  .btn,.chips button,.cats button,.tabs button{min-height:44px}
+  .tabs button{font-size:17px}
+}
 </style>
 
 <div class="wrap">
