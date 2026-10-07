@@ -27,6 +27,13 @@ header.mast{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:spa
 .mast h1 span{background:var(--pop);color:var(--popink);padding:0 .2em}
 .mast .date{font-size:13px;color:var(--muted);text-align:right}
 .mast .date b{display:block;font-family:var(--display);font-weight:400;font-size:18px;color:var(--ink)}
+.wrap>header{order:0}.wrap>section[aria-labelledby="s1"]{order:1}#sec2{order:3}#sec3{order:4}.wrap>.chips button.far{opacity:.45;border-style:dashed}
+.reg{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:var(--card)}
+.reg summary{cursor:pointer;font-weight:700}
+.reg[open]{display:flex;flex-direction:column;gap:10px}
+a.btn{text-decoration:none;display:inline-block}
+a.btn.off{opacity:.45;pointer-events:none}
+.notice{order:5}body.rf #sec2{order:4}body.rf #sec3{order:3}
 .step{display:flex;flex-direction:column;gap:12px}
 .step h2{font-size:20px;display:flex;align-items:center;gap:10px}
 .step h2 .n{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--paper);font-size:14px;flex:none}
@@ -221,12 +228,6 @@ ol.legs .rd{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;
 .ic{display:inline-flex;align-items:center;gap:6px;font-size:13px;border:1.5px solid var(--line);border-radius:999px;padding:3px 10px;cursor:pointer}
 .ic input{accent-color:var(--ink)}
 .ic.on{border-color:var(--ink);background:color-mix(in srgb,var(--pop) 30%,var(--card))}
-.chips button.far{opacity:.45;border-style:dashed}
-.reg{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:var(--card)}
-.reg summary{cursor:pointer;font-weight:700}
-.reg[open]{display:flex;flex-direction:column;gap:10px}
-a.btn{text-decoration:none;display:inline-block}
-a.btn.off{opacity:.45;pointer-events:none}
 .notice{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;margin:0}
 @media (prefers-reduced-motion:no-preference){.deal,.idea{animation:in .25s ease both}@keyframes in{from{transform:translateY(4px)}to{transform:none}}}
 
@@ -287,7 +288,12 @@ html{-webkit-text-size-adjust:100%}
     <button id="run" hidden></button><p id="runErr" hidden></p>
   </section>
 
-  <section class="step" aria-labelledby="s2">
+  <section class="step" id="orderSel" aria-label="探し方" style="order:2">
+    <h2 style="font-size:18px">どちらから探しますか?</h2>
+    <div class="row" style="align-items:center;gap:18px"><label class="only"><input type="checkbox" id="byStore" checked> スーパーから探す(お店のお得を上に)</label><label class="only"><input type="checkbox" id="byRecipe"> レシピから探す(レシピを上に)</label></div>
+  </section>
+
+  <section class="step" id="sec2" aria-labelledby="s2">
     <h2 id="s2"><span class="n">2</span>どの店で何が安い？</h2>
     <p class="lead" id="dealsHead"></p>
     <div id="pick"></div>
@@ -300,14 +306,14 @@ html{-webkit-text-size-adjust:100%}
     <div id="shops" class="shops"></div>
   </section>
 
-  <section class="step" aria-labelledby="s3">
+  <section class="step" id="sec3" aria-labelledby="s3">
     <h2 id="s3"><span class="n">3</span>お買い得でつくる</h2>
     <div class="tabs" role="tablist">
       <button role="tab" id="tabR" aria-selected="true">レシピ</button>
       <button role="tab" id="tabC" aria-selected="false">コーディネート</button>
     </div>
     <div id="recipePane" class="step">
-      <div class="genres" id="rmode" role="group" aria-label="探し方" style="grid-template-columns:1fr 1fr"></div>
+      <div class="genres" id="rmode" hidden role="group" aria-label="探し方" style="grid-template-columns:1fr 1fr"></div>
       <div class="chips" id="rstores" hidden></div>
       <div class="genres" id="genres" role="group" aria-label="料理のジャンル"></div>
       <div class="row" style="align-items:center"><button class="btn sub" id="more" hidden>別のレシピを考える</button><span class="lead" id="genStatus" style="font-size:14px"></span></div>
@@ -700,6 +706,21 @@ function renderRMode(all){
 }
 function storeList(all){return all.filter(r=>storesOf(r).includes(recipeStore)).sort((a,b)=>storesOf(a).length-storesOf(b).length)}
 function storeBadge(r){const o=storesOf(r).filter(n=>n!==recipeStore);return `<p class="lead" style="margin:0 0 4px;font-weight:700;font-size:14px">${o.length?`このお店と、ほか${o.length}店(${o.map(esc).join("、")})で材料がそろいます`:"このお店だけで材料がそろいます"}</p>`}
+
+/* ---- 探し方(スーパー/レシピ)で上下を入れ替える ---- */
+(function(){
+  const bs=$("byStore"), br=$("byRecipe"); if(!bs||!br)return;
+  let ls=null; try{ls=localStorage.getItem("otoku_view_by")}catch(e){}
+  function apply(by){
+    bs.checked=by==="store"; br.checked=by==="recipe";
+    document.body.classList.toggle("rf",by==="recipe");
+    const n2=document.querySelector("#sec2 h2 .n"), n3=document.querySelector("#sec3 h2 .n");
+    if(n2)n2.textContent=by==="recipe"?"3":"2"; if(n3)n3.textContent=by==="recipe"?"2":"3";
+    try{localStorage.setItem("otoku_view_by",by)}catch(e){}
+  }
+  bs.onchange=()=>apply("store"); br.onchange=()=>apply("recipe");
+  apply(ls==="recipe"?"recipe":"store");
+})();
 function renderIdeas(){
   renderISearch();
   if(mode==="recipe"){
