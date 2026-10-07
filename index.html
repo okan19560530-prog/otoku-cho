@@ -782,14 +782,14 @@ function regUpdate(){
   if(!FORM.url){link.removeAttribute("href");link.classList.add("off");$("regNote").textContent="登録の受付は準備中です。";return}
   if(!FORM.zipEntry||!FORM.radiusEntry){
     link.href=FORM.url;link.classList.remove("off");
-    $("regNote").textContent="開いたフォームで、郵便番号を入れて半径(km)を選び「送信」を押すと登録されます。次の読み取り("+nextRun()+")以降に、上の一覧へ出ます。地域が多いときは、もう少し後になることがあります。";
+    $("regNote").textContent="開いたフォームで、郵便番号を入れて半径(km)を選び「送信」を押すと登録されます。送信から1時間以内に確認して読み取りを始め、30分〜1時間ほどで上の一覧に出ます。";
     return;
   }
   if(!ok){link.removeAttribute("href");link.classList.add("off");$("regNote").textContent=z?`郵便番号は7桁です(いま${z.length}桁)。`:"郵便番号を入れて半径を選んでください。";return}
   const known=AREAS.some(a=>a.zip===z&&Number(a.radiusKm)===settings.radiusKm);
   const u=new URL(FORM.url);u.searchParams.set("usp","pp_url");u.searchParams.set(FORM.zipEntry,z);u.searchParams.set(FORM.radiusEntry,String(settings.radiusKm));
   link.href=u.toString();link.classList.remove("off");
-  $("regNote").textContent=known?"この地域はすでに一覧にあります。上の「読み取り済みの地域」から選べます。":`開いたGoogleフォームで「送信」を押すと登録されます。次の読み取り(${nextRun()})以降に、上の一覧に出ます。地域が多いときは、もう少し後になることがあります。`;
+  $("regNote").textContent=known?"この地域はすでに一覧にあります。上の「読み取り済みの地域」から選べます。":`開いたGoogleフォームで「送信」を押すと登録されます。送信から1時間以内に読み取りを始め、30分〜1時間ほどで上の一覧に出ます。`;
 }
 (function(){
   const GN={washoku:"和食",yoshoku:"洋食",ethnic:"エスニック料理(韓国・タイ・ベトナム・インドなど)",chuka:"中華料理",arrange:"アレンジレシピ(惣菜・加工品・カップ麺などにひと手間加えて別の料理にする)"};
