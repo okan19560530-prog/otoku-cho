@@ -221,6 +221,7 @@ ol.legs .rd{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;
 .ic{display:inline-flex;align-items:center;gap:6px;font-size:13px;border:1.5px solid var(--line);border-radius:999px;padding:3px 10px;cursor:pointer}
 .ic input{accent-color:var(--ink)}
 .ic.on{border-color:var(--ink);background:color-mix(in srgb,var(--pop) 30%,var(--card))}
+.chips button:disabled{opacity:.4;cursor:not-allowed}
 .reg{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:var(--card)}
 .reg summary{cursor:pointer;font-weight:700}
 .reg[open]{display:flex;flex-direction:column;gap:10px}
@@ -262,6 +263,8 @@ html{-webkit-text-size-adjust:100%}
     <div class="row">
       <label class="f" for="areaSel">読み取り済みの地域<select id="areaSel"></select></label>
     </div>
+    <div class="row" style="align-items:center"><span class="lead" style="font-size:14px;font-weight:700">距離</span><div class="chips" id="viewRadius" role="group" aria-label="距離"></div></div>
+    <p class="lead" id="radNote" style="font-size:13px;margin:0"></p>
     <p class="point" id="point"></p>
     <div class="status" id="status" data-s="idle" role="status"><span class="dot"></span><span class="msg" id="statusMsg">読み込み中…</span></div>
     <details class="reg" id="reg"><summary>一覧にない地域を登録する(郵便番号)</summary>
@@ -734,12 +737,31 @@ renderDeals();renderIdeas();showStatus();
 /* ---- みんなの版: data.json を読む ---- */
 const FORM={"url": "https://docs.google.com/forms/d/e/1FAIpQLSfVuJ0GYWVMByttP-hbrxjP1sqRdaWF10hhaFtaiSSlUsjjMg/viewform", "zipEntry": "", "radiusEntry": ""};
 let AREAS=[];
-function showArea(k){
-  const a=AREAS.find(x=>`${x.zip}-${x.radiusKm}`===k)||AREAS[0]; if(!a)return;
-  curKey=`${a.zip}-${a.radiusKm}`;
-  dealsDoc=a; ideasDoc={recipes:a.recipes,coords:a.coords}; extra.recipes={}; extra.coords=null;
-  LS.set("otoku_view_area",curKey);
-  $("point").innerHTML=`地点: <b>${esc(a.region||"")}</b> から半径${a.radiusKm}km`;
+let ZONES=[], viewR=3;
+function bestDocs(list){const m=new Map();for(const a of list){const o=m.get(a.zip);if(!o||Number(a.radiusKm)>Number(o.radiusKm)||(Number(a.radiusKm)===Number(o.radiusKm)&&(a.updatedAt||"")>(o.updatedAt||"")))m.set(a.zip,a)}return [...m.values()]}
+function viewDoc(a,r){
+  const stores=(a.stores||[]).filter(s=>s.distanceKm==null||Number(s.distanceKm)<=r+1e-9);
+  const names=new Set(stores.map(s=>s.name));
+  const items=(a.items||[]).filter(x=>names.has(x.store));
+  const iset=new Set(items.map(x=>x.name));
+  const ok=x=>(x.uses||[]).every(u=>iset.has(u));
+  const fr=o=>{const out={};for(const g in (o||{}))out[g]=(o[g]||[]).filter(ok);return out};
+  return {...a,radiusKm:r,scrapedKm:Number(a.radiusKm),stores,items,recipes:fr(a.recipes),recipesMore:fr(a.recipesMore),coords:(a.coords||[]).filter(ok)};
+}
+function renderViewRadius(scraped){
+  $("viewRadius").innerHTML=RADII.map(r=>`<button type="button" aria-pressed="${r===viewR}" data-r="${r}" ${r>scraped?"disabled":""}>${r}km</button>`).join("");
+  $("viewRadius").querySelectorAll("button").forEach(b=>b.onclick=()=>{viewR=Number(b.dataset.r);LS.set("otoku_view_r",viewR);showArea($("areaSel").value)});
+  $("radNote").textContent=scraped<RADII[RADII.length-1]?`この地域は半径${scraped}kmまで読み取り済みです。それより遠くは、次の読み取り(${nextRun()})以降に増えます。`:"";
+}
+function showArea(zip){
+  const a=ZONES.find(x=>x.zip===zip)||ZONES[0]; if(!a)return;
+  const scraped=Number(a.radiusKm);
+  if(viewR>scraped)viewR=Math.max(...RADII.filter(r=>r<=scraped),RADII[0]);
+  curKey=`${a.zip}-${viewR}`;
+  dealsDoc=viewDoc(a,viewR); ideasDoc={recipes:dealsDoc.recipes,coords:dealsDoc.coords}; extra.recipes={}; extra.coords=null;
+  LS.set("otoku_view_area",a.zip);
+  $("point").innerHTML=`地点: <b>${esc(a.region||"")}</b> から半径${viewR}km(${dealsDoc.stores.length}店)`;
+  renderViewRadius(scraped);
   const today=todayISO();
   $("status").dataset.s=a.date===today?"done":"idle";
   $("statusMsg").innerHTML=a.date===today?`今日のチラシを読み取り済み<span class="when">更新 ${ago(a.updatedAt)}</span>`:`${esc(a.date||"")}の結果です(今日の分は次の読み取り ${nextRun()} で更新)<span class="when">${a.updatedAt?"更新 "+ago(a.updatedAt):""}</span>`;
@@ -810,8 +832,10 @@ const SHARE_URL="https://okan19560530-prog.github.io/otoku-cho/";
     const d=await r.json(); AREAS=(d.areas||[]).filter(a=>a&&a.zip);
   }catch(e){$("statusMsg").textContent="データを読み込めませんでした。少し待ってから開き直してください。";return}
   if(!AREAS.length){$("statusMsg").textContent="まだ読み取った地域がありません。下から郵便番号を登録してください。";$("reg").open=true;return}
-  $("areaSel").innerHTML=AREAS.map(a=>`<option value="${a.zip}-${a.radiusKm}">${esc(a.region||a.zip)} ・ 半径${a.radiusKm}km</option>`).join("");
-  const saved=LS.get("otoku_view_area"); if(saved&&AREAS.some(a=>`${a.zip}-${a.radiusKm}`===saved))$("areaSel").value=saved;
+  ZONES=bestDocs(AREAS);
+  $("areaSel").innerHTML=ZONES.map(a=>`<option value="${a.zip}">${esc(a.region||a.zip)}</option>`).join("");
+  const saved=String(LS.get("otoku_view_area")||"").split("-")[0]; if(saved&&ZONES.some(a=>a.zip===saved))$("areaSel").value=saved;
+  const sr=Number(LS.get("otoku_view_r")); viewR=RADII.includes(sr)?sr:3;
   $("areaSel").onchange=()=>showArea($("areaSel").value);
   showArea($("areaSel").value);regUpdate();
 })();
