@@ -110,6 +110,13 @@ select:focus,input:focus,button:focus-visible,a:focus-visible{outline:3px solid 
 .lastday li{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:14px}
 .lastday li b{font-variant-numeric:tabular-nums}
 .lastday .where{font-weight:700}
+#rmode[hidden],#rstores[hidden]{display:none !important}
+.plan{background:color-mix(in srgb,var(--pop) 35%,var(--card));border:3px solid var(--ink);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.plan .planh{font-family:var(--display);font-size:26px;line-height:1.35}
+.plan ol{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:10px}
+.plan li{font-size:19px;line-height:1.5}.plan li b{font-size:22px}.plan li .pi{display:block;color:var(--muted);font-size:17px}
+.plan.mini{padding:10px 14px;border-width:2px;font-size:18px;line-height:1.6;gap:2px}.plan.mini .planh{font-size:18px}
+.buyl{margin:0;padding:8px 18px;font-weight:700;font-size:17px;background:var(--paper);border-bottom:1px solid var(--line)}
 .shops{display:flex;flex-direction:column;gap:16px}
 .shop{background:var(--card);border:2px solid var(--ink);border-radius:12px;overflow:hidden}
 .shop header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:16px 18px;border-bottom:2px solid var(--ink);background:color-mix(in srgb,var(--pop) 28%,var(--card))}
@@ -571,6 +578,10 @@ function renderDeals(){
     const by=stores.map(s=>[s,last.filter(x=>x.store===s.name)]).filter(([,l])=>l.length);
     $("lastday").innerHTML=`<div class="lastday"><h3>今日まで・今日だけのお得(${last.length}品)</h3><ul>${by.map(([s,l])=>l.slice(0,6).map(x=>`<li><span class="where">${esc(s.name)}${kmText(s)?`(${kmText(s)})`:""}</span><span>${esc(x.name)}${x.unit?" "+esc(x.unit):""}</span><b>${x.price==null?esc(x.priceText||""):yen(x.price)+"円"}</b></li>`).join("")+(l.length>6?`<li>…ほか${l.length-6}品は下の「${esc(s.name)}」で</li>`:"")).join("")}</ul></div>`;
   }else $("lastday").innerHTML="";
+  if(recMode){
+    const plan=stores.map(s=>({s,its:items.filter(x=>x.store===s.name)})), one=plan.length===1;
+    $("lastday").innerHTML=`<div class="plan"><div class="planh">${one?"このレシピは、1店で全部そろいます":`このレシピは、${plan.length}店に分けて買います`}</div><ol>${plan.map(({s,its})=>`<li><b>${esc(s.name)}</b>${kmText(s)?`(${kmText(s)})`:""} ${parkHTML(s,true)}<span class="pi">買うもの: ${its.map(x=>esc(x.name)+(x.price==null?"":" "+yen(x.price)+"円")).join("、")}</span></li>`).join("")}</ol>${plan.length>1?routeHTML(plan.map(p=>p.s.name),"買うお店を回るルート"):""}</div>`;
+  }
   // 絞り込み
   if(storeFilter!=="すべて"&&!stores.some(s=>s.name===storeFilter))storeFilter="すべて";
   $("storeChips").innerHTML=`<button aria-pressed="${storeFilter==="すべて"}" data-s="すべて">すべてのお店</button>`+stores.map(s=>`<button aria-pressed="${s.name===storeFilter}" data-s="${esc(s.name)}">${esc(s.name)}${kmText(s)?` ${kmText(s)}`:""}</button>`).join("");
@@ -584,9 +595,9 @@ function renderDeals(){
     let list=items.filter(x=>x.store===s.name&&(filter==="すべて"||x.category===filter));
     if(!list.length)return"";
     list.sort((a,b)=>(endsToday(b)-endsToday(a))||(CATS.indexOf(a.category)-CATS.indexOf(b.category))||((offPct(b)??-1)-(offPct(a)??-1)));
-    const open=opened.has(s.name)||storeFilter!=="すべて", shown=open?list:list.slice(0,SHOW);
+    const open=opened.has(s.name)||storeFilter!=="すべて"||recMode, shown=open?list:list.slice(0,SHOW);
     const end=endMD(s.period), endTxt=s.period?(/限り/.test(s.period)||end===TODAY_MD?"今日まで":end?`${end}まで`:s.period):"";
-    return `<article class="shop"><header><h3>${esc(s.name)}</h3>${kmText(s)?`<span class="km">${kmText(s)}</span>`:""}${endTxt?`<span class="per${endTxt==="今日まで"?" end":""}">チラシ ${esc(endTxt)}</span>`:""}${parkHTML(s)}${s.parkingNote?`<span class="per">${esc(s.parkingNote)}</span>`:""}${s.leafletUrl?`<a href="${esc(s.leafletUrl)}" target="_blank" rel="noopener">チラシを見る</a>`:""}</header><ul class="rows">${shown.map(x=>rowHTML(x,filter==="すべて")).join("")}</ul>${list.length>SHOW&&!open?`<button class="morebtn" data-open="${esc(s.name)}">残り${list.length-SHOW}品も見る</button>`:""}</article>`;
+    return `<article class="shop"><header><h3>${esc(s.name)}</h3>${kmText(s)?`<span class="km">${kmText(s)}</span>`:""}${endTxt?`<span class="per${endTxt==="今日まで"?" end":""}">チラシ ${esc(endTxt)}</span>`:""}${parkHTML(s)}${s.parkingNote?`<span class="per">${esc(s.parkingNote)}</span>`:""}${s.leafletUrl?`<a href="${esc(s.leafletUrl)}" target="_blank" rel="noopener">チラシを見る</a>`:""}</header>${recMode?`<p class="buyl">このレシピで、このお店で買うもの(${list.length}品)</p>`:""}<ul class="rows">${shown.map(x=>rowHTML(x,filter==="すべて")).join("")}</ul>${list.length>SHOW&&!open?`<button class="morebtn" data-open="${esc(s.name)}">残り${list.length-SHOW}品も見る</button>`:""}</article>`;
   }).join("");
   $("shops").innerHTML=html||'<div class="empty">この条件に合うお買い得はありません。お店や売り場の絞り込みを変えてみてください。</div>';
   $("shops").querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{opened.add(b.dataset.open);renderDeals()});
@@ -762,7 +773,9 @@ function renderIdeas(){
     if(storeMode&&!list.length){$("ideas").innerHTML='<div class="empty">このお店の品を使う、このジャンルのレシピはまだありません。別のジャンルやお店を選んでください。</div>';return}
     if(!list.length){const k=genre+"|"+curKey+"|"+pickList().join(",");$("ideas").innerHTML=`<div class="empty">${pickList().length&&pickOnly?"選んだお店だけで材料がそろう":"この"}ジャンルのレシピはまだありません。${sample?"選んだお店の品で考えています…":""}</div>`;if(sample&&!autoTried.has(k)){autoTried.add(k);genRecipe()}return}
     $("ideas").innerHTML=list.map((x,i)=>{let c=(storeMode?storeBadge(x):"")+recipeCard(x);
-      if(byMode==="recipe"){const on=recipeSel&&recipeSel.title===x.title;c=c.replace(/<\/article>$/,`<button class="btn${on?"":" sub"}" type="button" data-rsel="${i}">${on?"選択中:お店・商品を表示しています":"このレシピのお店・商品を見る"}</button></article>`)}
+      if(byMode==="recipe"){const ss=storesOf(x).map(n=>[n,storeObj(n)]).sort((a,b)=>(a[1].distanceKm??99)-(b[1].distanceKm??99));
+        c=c.replace('<article class="idea recipe">',`<article class="idea recipe"><div class="plan mini"><div class="planh">${ss.length===1?"買うお店: 1店でそろいます":`買うお店: ${ss.length}店に分けて買います`}</div>${ss.map(([n,o])=>`<div><b>${esc(n)}</b>${kmText(o)?`(${kmText(o)})`:""} ${parkHTML(o,true)}</div>`).join("")}</div>`);
+        const on=recipeSel&&recipeSel.title===x.title;c=c.replace(/<\/article>$/,`<button class="btn${on?"":" sub"}" type="button" data-rsel="${i}">${on?"選択中:お店・商品を表示しています":"このレシピのお店・商品を見る"}</button></article>`)}
       return c}).join("");
     $("ideas").querySelectorAll("[data-rsel]").forEach(b=>b.onclick=()=>{recipeSel=list[+b.dataset.rsel];renderDeals();renderIdeas();document.getElementById("sec2").scrollIntoView({behavior:"smooth"})});
   }else{
