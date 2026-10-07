@@ -110,12 +110,19 @@ select:focus,input:focus,button:focus-visible,a:focus-visible{outline:3px solid 
 .lastday li{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:14px}
 .lastday li b{font-variant-numeric:tabular-nums}
 .lastday .where{font-weight:700}
+.filters[hidden]{display:none !important}
 #rmode[hidden],#rstores[hidden]{display:none !important}
 .plan{background:color-mix(in srgb,var(--pop) 35%,var(--card));border:3px solid var(--ink);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
 .plan .planh{font-family:var(--display);font-size:26px;line-height:1.35}
 .plan ol{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:10px}
 .plan li{font-size:19px;line-height:1.5}.plan li b{font-size:22px}.plan li .pi{display:block;color:var(--muted);font-size:17px}
 .plan.mini{padding:10px 14px;border-width:2px;font-size:18px;line-height:1.6;gap:2px}.plan.mini .planh{font-size:18px}
+.recipe details>summary{cursor:pointer;list-style:none;display:flex;flex-direction:column;gap:6px}
+.recipe details>summary::-webkit-details-marker{display:none}
+.recipe details[open]>summary{margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.recipe .rhint{font-size:15px;color:var(--muted)}
+.recipe details[open] .rhint{display:none}
+.recipe>.btn{margin-top:10px;align-self:flex-start}
 .buyl{margin:0;padding:8px 18px;font-weight:700;font-size:17px;background:var(--paper);border-bottom:1px solid var(--line)}
 .shops{display:flex;flex-direction:column;gap:16px}
 .shop{background:var(--card);border:2px solid var(--ink);border-radius:12px;overflow:hidden}
@@ -316,7 +323,7 @@ html{-webkit-text-size-adjust:100%}
     <p class="lead" id="dealsHead"></p>
     <div id="pick"></div>
     <div id="lastday"></div>
-    <div class="filters">
+    <div class="filters" id="filters">
       <div class="flabel">お店</div><div class="cats" id="storeChips" aria-label="お店で絞り込む"></div>
       <div class="flabel">売り場</div><div class="cats" id="cats" aria-label="売り場で絞り込む"></div>
       <div class="flabel">駐車場</div><label class="only"><input type="checkbox" id="parkOnly"> 駐車場のあるお店だけ表示する</label>
@@ -558,15 +565,18 @@ function renderDeals(){
   if(recMode&&recipeSel&&!(recipeSel.uses||[]).every(u=>itemOfUse(u))){
     ["lastday","storeChips","cats"].forEach(id=>$(id).innerHTML="");
     $("dealsHead").innerHTML=`<b>「${esc(recipeSel.title)}」</b>の材料を売るお店が、この距離の範囲にはありません。`;
+    $("filters").hidden=true;
     $("shops").innerHTML='<div class="empty">距離を広げると、このレシピのお店・商品が出ます。別のレシピを選ぶこともできます。</div>';
     return;
   }
   if(recMode&&!recipeSel){
     ["lastday","storeChips","cats"].forEach(id=>$(id).innerHTML="");
     $("dealsHead").textContent="「レシピから探す」を選んでいます。";
+    $("filters").hidden=true;
     $("shops").innerHTML='<div class="empty">レシピのカードにある「このレシピのお店・商品を見る」を押すと、そのレシピに使うチラシの商品と、売っているお店だけがここに出ます。</div>';
     return;
   }
+  $("filters").hidden=false;
   let stores=allStores.filter(s=>inPick(s.name)), items=D.items.filter(x=>inPick(x.store));
   if(recMode){const set=new Set((recipeSel.uses||[]).map(u=>itemOfUse(u)).filter(Boolean));items=items.filter(x=>set.has(x));stores=stores.filter(s=>items.some(x=>x.store===s.name))}
   if(recMode)$("dealsHead").innerHTML=`<b>「${esc(recipeSel.title)}」</b>に使うチラシの品: ${items.length}品・${stores.length}店(近いお店から順)。 <button class="btn sub" id="backRecipe" type="button">レシピに戻る</button>`;
@@ -706,9 +716,9 @@ function recipeCard(x){
   const ings=(x.ingredients||[]).map(i=>splitIng(i,x.uses));
   const steps=(x.steps||[]).map(s=>typeof s==="object"?s:{text:String(s)});
   const cinfo=costInfo(x,ings);
-  return `<article class="idea recipe"><div class="rhead"><h4>${esc(x.title)}</h4>${priceBadge(cinfo)}</div><span class="meta">${x.time?"調理時間 "+esc(x.time)+" ・ ":""}${esc(x.servings||"2人分")}</span>${purchaseHTML(x,cinfo)}${mediaHTML(x)}
+  return `<article class="idea recipe"><details><summary><div class="rhead"><h4>${esc(x.title)}</h4>${priceBadge(cinfo)}</div><span class="rhint">▼ タップして材料・作り方を見る</span></summary><span class="meta">${x.time?"調理時間 "+esc(x.time)+" ・ ":""}${esc(x.servings||"2人分")}</span>${purchaseHTML(x,cinfo)}${mediaHTML(x)}
   <div><strong>材料と使用量(${esc(x.servings||"2人分")})</strong><table class="ing"><tbody>${ings.map(g=>`<tr${g.flyer?' class="fly"':""}><td>${esc(g.name)}${g.flyer?'<span class="fl">チラシ</span>':""}</td><td>${esc(g.amount||"")}</td><td class="yc">${g.flyer?(c=>c==null?"":"約"+yen(Math.round(c))+"円")(ingCost(g,itemFor(g.name,x.uses))):""}</td></tr>`).join("")}</tbody></table></div>
-  <div><strong>作り方</strong><ol class="steps">${steps.map(st=>`<li><span>${esc(st.text||"")}</span>${st.time?`<span class="st">${esc(st.time)}</span>`:""}</li>`).join("")}</ol></div>${x.tip?`<p class="tip">${esc(x.tip)}</p>`:""}</article>`}
+  <div><strong>作り方</strong><ol class="steps">${steps.map(st=>`<li><span>${esc(st.text||"")}</span>${st.time?`<span class="st">${esc(st.time)}</span>`:""}</li>`).join("")}</ol></div>${x.tip?`<p class="tip">${esc(x.tip)}</p>`:""}</details></article>`}
 function coordCard(x){return `<article class="idea"><h4>${esc(x.title)}</h4><span class="meta">${esc(x.scene||"")}</span>${buyHTML(x.uses)}<div><strong>組み合わせ</strong><ul>${(x.items||[]).map(i=>`<li>${esc(i)}</li>`).join("")}</ul></div>${x.tip?`<p class="tip">${esc(x.tip)}</p>`:""}</article>`}
 /* ---- 食材でレシピサイトを探す ---- */
 const isel=new Set();
@@ -774,7 +784,7 @@ function renderIdeas(){
     if(!list.length){const k=genre+"|"+curKey+"|"+pickList().join(",");$("ideas").innerHTML=`<div class="empty">${pickList().length&&pickOnly?"選んだお店だけで材料がそろう":"この"}ジャンルのレシピはまだありません。${sample?"選んだお店の品で考えています…":""}</div>`;if(sample&&!autoTried.has(k)){autoTried.add(k);genRecipe()}return}
     $("ideas").innerHTML=list.map((x,i)=>{let c=(storeMode?storeBadge(x):"")+recipeCard(x);
       if(byMode==="recipe"){const ss=storesOf(x).map(n=>[n,storeObj(n)]).sort((a,b)=>(a[1].distanceKm??99)-(b[1].distanceKm??99));
-        c=c.replace('<article class="idea recipe">',`<article class="idea recipe"><div class="plan mini"><div class="planh">${ss.length===1?"買うお店: 1店でそろいます":`買うお店: ${ss.length}店に分けて買います`}</div>${ss.map(([n,o])=>`<div><b>${esc(n)}</b>${kmText(o)?`(${kmText(o)})`:""} ${parkHTML(o,true)}</div>`).join("")}</div>`);
+        c=c.replace('</summary>',`</summary><div class="plan mini"><div class="planh">${ss.length===1?"買うお店: 1店でそろいます":`買うお店: ${ss.length}店に分けて買います`}</div>${ss.map(([n,o])=>`<div><b>${esc(n)}</b>${kmText(o)?`(${kmText(o)})`:""} ${parkHTML(o,true)}</div>`).join("")}</div>`);
         const on=recipeSel&&recipeSel.title===x.title;c=c.replace(/<\/article>$/,`<button class="btn${on?"":" sub"}" type="button" data-rsel="${i}">${on?"選択中:お店・商品を表示しています":"このレシピのお店・商品を見る"}</button></article>`)}
       return c}).join("");
     $("ideas").querySelectorAll("[data-rsel]").forEach(b=>b.onclick=()=>{recipeSel=list[+b.dataset.rsel];renderDeals();renderIdeas();document.getElementById("sec2").scrollIntoView({behavior:"smooth"})});
