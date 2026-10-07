@@ -117,6 +117,11 @@ select:focus,input:focus,button:focus-visible,a:focus-visible{outline:3px solid 
 .plan ol{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:10px}
 .plan li{font-size:19px;line-height:1.5}.plan li b{font-size:22px}.plan li .pi{display:block;color:var(--muted);font-size:17px}
 .plan.mini{padding:10px 14px;border-width:2px;font-size:18px;line-height:1.6;gap:2px}.plan.mini .planh{font-size:18px}
+.rshops{display:flex;flex-direction:column;gap:14px;margin-bottom:12px}
+.recipe .rbtn{display:inline-flex;align-self:flex-start;align-items:center;font-size:18px;font-weight:700;border:2px solid var(--ink);border-radius:999px;padding:10px 20px;background:var(--ink);color:var(--paper)}
+.recipe .rb-o{display:none}.recipe details[open] .rb-o{display:inline}.recipe details[open] .rb-c{display:none}
+.recipe details[open] .rbtn{background:var(--card);color:var(--ink)}
+body.rf #sec2{display:none !important}
 .recipe details>summary{cursor:pointer;list-style:none;display:flex;flex-direction:column;gap:6px}
 .recipe details>summary::-webkit-details-marker{display:none}
 .recipe details[open]>summary{margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
@@ -712,11 +717,20 @@ function purchaseHTML(x,c){
   ${(()=>{const h=dealsDoc?.center,pts=routeStores(shops);if(!h||!pts.length)return"";const {order}=bestRoute(h,pts);return `<div class="rmini">買い物ルート: 家 → ${order.map((p,i)=>`${i+1}. ${esc(p.name)}`).join(" → ")} → 家 <a href="${esc(mapsUrl(h,order,"driving"))}" target="_blank" rel="noopener">Googleマップで道順</a></div>`})()}
   <div class="total">行くお店: ${shops.map(esc).join("、")}。調味料・油など家にありそうなものは含みません。${c.partial?"「—」「店頭価格」の品は金額を出せなかったため、料理あたりの金額に入っていません。":""}</div></div>`;
 }
+function shopsForRecipe(x){
+  const its=[...new Set((x.uses||[]).map(u=>itemOfUse(u)).filter(Boolean))];
+  const stores=[...new Set(its.map(i=>i.store))].map(n=>({...storeObj(n),name:n})).sort((a,b)=>(a.distanceKm??99)-(b.distanceKm??99));
+  if(!stores.length)return "";
+  const one=stores.length===1;
+  const plan=`<div class="plan"><div class="planh">${one?"このレシピは、1店で全部そろいます":`このレシピは、${stores.length}店に分けて買います`}</div><ol>${stores.map(s=>`<li><b>${esc(s.name)}</b>${kmText(s)?`(${kmText(s)})`:""} ${parkHTML(s,true)}<span class="pi">買うもの: ${its.filter(i=>i.store===s.name).map(i=>esc(i.name)+(i.price==null?"":" "+yen(i.price)+"円")).join("、")}</span></li>`).join("")}</ol>${stores.length>1?routeHTML(stores.map(s=>s.name),"買うお店を回るルート"):""}</div>`;
+  const arts=stores.map(s=>`<article class="shop"><header><h3>${esc(s.name)}</h3>${kmText(s)?`<span class="km">${kmText(s)}</span>`:""}${parkHTML(s)}${s.leafletUrl?`<a href="${esc(s.leafletUrl)}" target="_blank" rel="noopener">チラシを見る</a>`:""}</header><p class="buyl">このレシピで、このお店で買うもの</p><ul class="rows">${its.filter(i=>i.store===s.name).map(i=>rowHTML(i,false)).join("")}</ul></article>`).join("");
+  return `<div class="rshops">${plan}${arts}</div>`;
+}
 function recipeCard(x){
   const ings=(x.ingredients||[]).map(i=>splitIng(i,x.uses));
   const steps=(x.steps||[]).map(s=>typeof s==="object"?s:{text:String(s)});
   const cinfo=costInfo(x,ings);
-  return `<article class="idea recipe"><details><summary><div class="rhead"><h4>${esc(x.title)}</h4>${priceBadge(cinfo)}</div><span class="rhint">▼ タップして材料・作り方を見る</span></summary><span class="meta">${x.time?"調理時間 "+esc(x.time)+" ・ ":""}${esc(x.servings||"2人分")}</span>${purchaseHTML(x,cinfo)}${mediaHTML(x)}
+  return `<article class="idea recipe"><details><summary><div class="rhead"><h4>${esc(x.title)}</h4>${priceBadge(cinfo)}</div><span class="rbtn"><span class="rb-c">このレシピ・お店を見る</span><span class="rb-o">たたむ</span></span></summary>${shopsForRecipe(x)}<span class="meta">${x.time?"調理時間 "+esc(x.time)+" ・ ":""}${esc(x.servings||"2人分")}</span>${purchaseHTML(x,cinfo)}${mediaHTML(x)}
   <div><strong>材料と使用量(${esc(x.servings||"2人分")})</strong><table class="ing"><tbody>${ings.map(g=>`<tr${g.flyer?' class="fly"':""}><td>${esc(g.name)}${g.flyer?'<span class="fl">チラシ</span>':""}</td><td>${esc(g.amount||"")}</td><td class="yc">${g.flyer?(c=>c==null?"":"約"+yen(Math.round(c))+"円")(ingCost(g,itemFor(g.name,x.uses))):""}</td></tr>`).join("")}</tbody></table></div>
   <div><strong>作り方</strong><ol class="steps">${steps.map(st=>`<li><span>${esc(st.text||"")}</span>${st.time?`<span class="st">${esc(st.time)}</span>`:""}</li>`).join("")}</ol></div>${x.tip?`<p class="tip">${esc(x.tip)}</p>`:""}</details></article>`}
 function coordCard(x){return `<article class="idea"><h4>${esc(x.title)}</h4><span class="meta">${esc(x.scene||"")}</span>${buyHTML(x.uses)}<div><strong>組み合わせ</strong><ul>${(x.items||[]).map(i=>`<li>${esc(i)}</li>`).join("")}</ul></div>${x.tip?`<p class="tip">${esc(x.tip)}</p>`:""}</article>`}
@@ -782,17 +796,7 @@ function renderIdeas(){
     if(storeMode&&!recipeStore){$("ideas").innerHTML='<div class="empty">上のお店を選ぶと、そのお店のチラシの品を使うレシピが出ます。</div>';return}
     if(storeMode&&!list.length){$("ideas").innerHTML='<div class="empty">このお店の品を使う、このジャンルのレシピはまだありません。別のジャンルやお店を選んでください。</div>';return}
     if(!list.length){const k=genre+"|"+curKey+"|"+pickList().join(",");$("ideas").innerHTML=`<div class="empty">${pickList().length&&pickOnly?"選んだお店だけで材料がそろう":"この"}ジャンルのレシピはまだありません。${sample?"選んだお店の品で考えています…":""}</div>`;if(sample&&!autoTried.has(k)){autoTried.add(k);genRecipe()}return}
-    $("ideas").innerHTML=list.map((x,i)=>{let c=(storeMode?storeBadge(x):"")+recipeCard(x);
-      if(byMode==="recipe"){const ss=storesOf(x).map(n=>[n,storeObj(n)]).sort((a,b)=>(a[1].distanceKm??99)-(b[1].distanceKm??99));
-        c=c.replace('</summary>',`</summary><div class="plan mini"><div class="planh">${ss.length===1?"買うお店: 1店でそろいます":`買うお店: ${ss.length}店に分けて買います`}</div>${ss.map(([n,o])=>`<div><b>${esc(n)}</b>${kmText(o)?`(${kmText(o)})`:""} ${parkHTML(o,true)}</div>`).join("")}</div>`);
-        const on=recipeSel&&recipeSel.title===x.title;
-        if(on)c=c.replace("<details>","<details open>");
-        c=c.replace(/<\/article>$/,on?`<button class="btn" type="button" data-rtog="1">レシピをたたむ</button></article>`:`<button class="btn sub" type="button" data-rsel="${i}">このレシピのお店・商品を見る</button></article>`)}
-      return c}).join("");
-    $("ideas").querySelectorAll("[data-rtog]").forEach(b=>{const art=b.closest("article"),d=art.querySelector("details");
-      b.onclick=()=>{d.open=!d.open};
-      d.addEventListener("toggle",()=>{b.textContent=d.open?"レシピをたたむ":"レシピをひらく"})});
-    $("ideas").querySelectorAll("[data-rsel]").forEach(b=>b.onclick=()=>{recipeSel=list[+b.dataset.rsel];renderDeals();renderIdeas();document.getElementById("sec2").scrollIntoView({behavior:"smooth"})});
+    $("ideas").innerHTML=list.map(x=>(storeMode?storeBadge(x):"")+recipeCard(x)).join("");
   }else{
     const list=[...(ideasDoc?.coords||[]),...(extra.coords||[])].filter(okByPick);
     $("moreC").hidden=!sample||!wearItems().length;
