@@ -117,6 +117,7 @@ select:focus,input:focus,button:focus-visible,a:focus-visible{outline:3px solid 
 .plan ol{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:10px}
 .plan li{font-size:19px;line-height:1.5}.plan li b{font-size:22px}.plan li .pi{display:block;color:var(--muted);font-size:17px}
 .plan.mini{padding:10px 14px;border-width:2px;font-size:18px;line-height:1.6;gap:2px}.plan.mini .planh{font-size:18px}
+#ideas{overflow-anchor:none}
 .rshops{display:flex;flex-direction:column;gap:14px;margin-bottom:12px}
 .recipe .rbtn{display:inline-flex;align-self:flex-start;align-items:center;font-size:18px;font-weight:700;border:2px solid var(--ink);border-radius:999px;padding:10px 20px;background:var(--ink);color:var(--paper)}
 .recipe .rb-o{display:none}.recipe details[open] .rb-o{display:inline}.recipe details[open] .rb-c{display:none}
@@ -717,6 +718,13 @@ function purchaseHTML(x,c){
   ${(()=>{const h=dealsDoc?.center,pts=routeStores(shops);if(!h||!pts.length)return"";const {order}=bestRoute(h,pts);return `<div class="rmini">買い物ルート: 家 → ${order.map((p,i)=>`${i+1}. ${esc(p.name)}`).join(" → ")} → 家 <a href="${esc(mapsUrl(h,order,"driving"))}" target="_blank" rel="noopener">Googleマップで道順</a></div>`})()}
   <div class="total">行くお店: ${shops.map(esc).join("、")}。調味料・油など家にありそうなものは含みません。${c.partial?"「—」「店頭価格」の品は金額を出せなかったため、料理あたりの金額に入っていません。":""}</div></div>`;
 }
+/* たたむ・ひらくで画面が飛ばないよう、押したボタンの位置を保つ */
+document.addEventListener("click",e=>{
+  const sm=e.target.closest&&e.target.closest("#ideas summary"); if(!sm)return;
+  const top=sm.getBoundingClientRect().top;
+  const fix=()=>{const d=sm.getBoundingClientRect().top-top;if(Math.abs(d)>1)window.scrollBy(0,d)};
+  requestAnimationFrame(()=>{fix();requestAnimationFrame(fix)});
+});
 function shopsForRecipe(x){
   const its=[...new Set((x.uses||[]).map(u=>itemOfUse(u)).filter(Boolean))];
   const stores=[...new Set(its.map(i=>i.store))].map(n=>({...storeObj(n),name:n})).sort((a,b)=>(a.distanceKm??99)-(b.distanceKm??99));
