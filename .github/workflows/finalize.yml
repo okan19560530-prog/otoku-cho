@@ -14,6 +14,6 @@ jobs:
       - run: |
           git config user.name "otoku-bot"
           git config user.email "otoku-bot@users.noreply.github.com"
-          git add data.json csv
+          git add data.json csv overrides.csv
           git diff --cached --quiet || git commit -m "自動: 修正CSVの反映とCSV書き出し [skip ci]"
           git push
