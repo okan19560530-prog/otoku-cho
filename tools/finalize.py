@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """data.json に overrides.csv(手直し)を当て、csv/stores.csv と csv/items.csv を書き出す。何度実行しても同じ結果になる。
-手直しは、チラシ側の価格か期間が変わったら自動で失効する(状態列に「期限切れ」と記録)。"""
+手直しは、チラシ側の価格か期間が変わったら自動で失効する(期限切れの行は overrides.csv から自動で取り除き、csv/overrides_history.csv に記録)。"""
 import csv, datetime, json, os, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, 'data.json')
@@ -64,6 +64,16 @@ def main():
             # 削除済みの行は、削除した商品が data.json に残らないため「見つからない」になる → 再構築後に再確認される
             r['状態'] = r['状態'] or '該当なし'
     json.dump(d, open(DATA, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+    # 期限切れの行は overrides.csv から自動で取り除き、記録だけ csv/overrides_history.csv に残す
+    expired = [r for r in rows if is_row(r) and r['状態'].startswith('期限切れ')]
+    rows = [r for r in rows if r not in expired]
+    os.makedirs(os.path.join(ROOT, 'csv'), exist_ok=True)
+    if expired:
+        hp = os.path.join(ROOT, 'csv', 'overrides_history.csv'); new = not os.path.exists(hp)
+        with open(hp, 'a', encoding='utf-8-sig' if new else 'utf-8', newline='') as f:
+            w = csv.DictWriter(f, fieldnames=COLS); 
+            if new: w.writeheader()
+            w.writerows(expired)
     with open(OVR, 'w', encoding='utf-8-sig', newline='') as f:
         w = csv.DictWriter(f, fieldnames=COLS); w.writeheader(); w.writerows(rows)
     os.makedirs(os.path.join(ROOT, 'csv'), exist_ok=True)
