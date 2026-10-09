@@ -5,3 +5,10 @@
 - 公開ページ: https://okan19560530-prog.github.io/otoku-cho/
 - `index.html` が画面、`data.json` が1日3回自動で更新されるデータです。
 - 価格は自動で読み取った内容で、読み違いがありえます。お買い物の前にお店の表示をご確認ください。
+
+## CSV と手直し
+- `csv/items.csv`, `csv/stores.csv` : 公開データを Excel で開ける形で書き出したもの(自動更新)。
+- `overrides.csv` : 価格などの手直し。1行=1商品。商品名は items.csv と完全に同じ表記で書く。
+  列: 郵便番号(空欄=全地域) / 店名(空欄=全店) / 商品名 / 価格 / 価格表示 / 通常価格 / メモ / 操作(削除と書くと表から消える)。
+  GitHub 上で編集して保存すると、自動で data.json に反映される。毎日の自動更新で上書きされても、同じ行が再び当たる。
+- `tools/finalize.py` : 上の反映と CSV 書き出しを行う(`python3 tools/finalize.py`)。

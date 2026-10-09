@@ -1,0 +1,19 @@
+name: finalize
+on:
+  push:
+    branches: [main]
+    paths: [data.json, overrides.csv]
+permissions:
+  contents: write
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/finalize.py
+      - run: |
+          git config user.name "otoku-bot"
+          git config user.email "otoku-bot@users.noreply.github.com"
+          git add data.json csv
+          git diff --cached --quiet || git commit -m "自動: 修正CSVの反映とCSV書き出し [skip ci]"
+          git push
